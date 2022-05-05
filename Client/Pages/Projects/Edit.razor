@@ -1,0 +1,91 @@
+﻿@page "/projects/edit/{Id:guid}"
+
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject HttpClient Http 
+<h3>Edit Project</h3>
+
+<EditForm Model="Project" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label class="control-label">Project Description</label>
+        <InputText @bind-Value="Project.ProjectName" class="form-control" default-value="@Project.ProjectName" />
+        <ValidationMessage For="@(() => Project.ProjectName)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Assigned Company</label>
+        <select @bind="Project.CompanyId" class="form-control">
+            <option value=""></option>
+            @foreach (var comp in companies)
+            {
+                <option value="@comp.CompanyId">@comp.CompanyName</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => Project.CompanyId)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Starting Date</label>
+        <InputDate @bind-Value="Project.StartDate" class="form-control" default-value="@Project.StartDate" />
+        <ValidationMessage For="@(() => Project.StartDate)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Ending Date</label>
+        <InputDate @bind-Value="Project.EndDate" class="form-control" default-value="@Project.EndDate" />
+        <ValidationMessage For="@(() => Project.EndDate)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Completion</label>
+        <input type="checkbox" @bind-value="Project.Completed" class="form-control" default-value="@Project.Completed" />
+        <ValidationMessage For="@(() => Project.Completed)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Modify
+    </button>
+</EditForm>
+
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Project Project { get; set; } = new Project();
+    public List<Company> companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            Project = await Http.GetFromJsonAsync<Project>($"/api/Projects/{Id}");
+            companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void HandleValidSubmit()
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"/api/Projects/{Project.ProjectId}", Project);
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/projects");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

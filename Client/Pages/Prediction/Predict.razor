@@ -1,0 +1,122 @@
+﻿@page "/predict"
+
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h3>Prediction</h3>
+
+<EditForm Model="Project" OnSubmit="@Report">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label class="control-label">Assigned Company</label>
+        <select @bind="Project.CompanyId" class="form-control">
+            <option value=""></option>
+            @foreach (var comp in Companies)
+            {
+                <option value="@comp.CompanyId">@comp.CompanyName</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => Project.CompanyId)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Ending Date</label>
+        <InputDate @bind-Value="Project.EndDate" class="form-control"/>
+        <ValidationMessage For="@(() => Project.EndDate)" />
+    </div>
+    <button class="btn-primary">Predict Projects</button>
+</EditForm>
+<p></p>
+<p>@finalResult</p>
+
+
+@code {
+
+    private List<Project> Projects = new List<Project>();
+    private Project Project = new Project();
+    private List<Employee> Employees = new List<Employee>();
+    private List<EmployeeProject> EmployeeProjects = new List<EmployeeProject>();
+    private Company Company = new Company();
+    private List<Company> Companies = new List<Company>();
+    private List<Project> successProjects = new List<Project>();
+    string finalResult;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Project.EndDate = DateTime.Today;
+            Project.EndDate = Project.EndDate.AddDays(1);
+            Companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+            Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Projects");
+            Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+            EmployeeProjects = await Http.GetFromJsonAsync<List<EmployeeProject>>("/api/EmployeeProjects");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async Task Report()
+    {
+        successProjects.Clear();
+
+        int empCount = 0;
+        int diffCount = 0;
+        double projDayDiff = 0;
+
+        double dayDiff = (Project.EndDate - DateTime.Today).TotalDays;
+
+        try
+        {
+            Company = await Http.GetFromJsonAsync<Company>($"/api/Companies/{Project.CompanyId}");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+
+        foreach (var proj in Projects)
+        {
+            if (proj.CompanyId == Company.CompanyId)
+            {
+                successProjects.Add(proj);
+            }
+        }
+
+        foreach (var df in successProjects)
+        {
+            projDayDiff += (df.EndDate - df.StartDate).TotalDays;
+            diffCount += 1;
+
+            @foreach (var empProj in EmployeeProjects)
+            {
+                if (empProj.ProjectId == df.ProjectId)
+                {
+                    empCount += 1;
+                }
+            }
+        }
+
+        double avgProj = projDayDiff / diffCount; //how long for 1 project
+        double fProjAmount = dayDiff /avgProj; //avg amount of projects from today to future date;
+        double avgEmp = empCount / diffCount; //avg employee per project?
+
+        if (fProjAmount < 1)
+            {
+            avgEmp = 0;
+            }
+
+        finalResult = $"Amount of projects predicted is {Math.Round(fProjAmount)} over {dayDiff} days. Amount of employees predicted for projects are {avgEmp * Math.Round(fProjAmount)}.";
+    }
+}

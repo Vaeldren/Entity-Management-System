@@ -1,0 +1,64 @@
+﻿@page "/employees/create"
+
+@attribute [Authorize]
+@inject HttpClient Http 
+@inject NavigationManager Navigation
+
+<h3>Create Employee</h3>
+
+<EditForm Model="Employee" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label class="control-label">Employee Name</label>
+        <InputText @bind-Value="Employee.Username" class="form-control" />
+        <ValidationMessage For="@(() => Employee.Username)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Assigned Company</label>
+        <select @bind="Employee.CompanyId" class="form-control">
+            <option value=""></option>
+            @foreach (var comp in companies)
+            {
+                <option value="@comp.CompanyId">@comp.CompanyName</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => Employee.CompanyId)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Create
+    </button>
+</EditForm>
+
+
+@code {
+    private Employee Employee { get; set; } = new Employee();
+    public List<Company> companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        try {
+            var response = await Http.PostAsJsonAsync("/api/Employees", Employee);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var project = JsonConvert.DeserializeObject<Employee>(content);
+            Navigation.NavigateTo("/employees");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+
+        } catch (Exception e)
+        {
+
+        }
+    }
+}

@@ -1,0 +1,73 @@
+﻿@page "/tickets/delete/{Id:guid}"
+
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h1> Please confirm you want to delete the following ticket?</h1>
+
+<h4>Description</h4>
+<p>@Ticket.Description</p>
+
+<h4>Status</h4>
+<p>@Ticket.Status</p>
+
+<h4>Assigned User Id</h4>
+<p>@empName</p>
+
+<h4>Start Date</h4>
+<p>@Ticket.StartDate.ToShortDateString()</p>
+
+<h4>End Date</h4>
+<p>@Ticket.EndDate.ToShortDateString()</p>
+
+<button class="btn btn-danger" @onclick="DeleteTicket">Delete</button>
+
+@code{
+    [Parameter] public Guid Id { get; set; }
+    private Ticket Ticket { get; set; } = new Ticket();
+    private List<Employee> Employee = new List<Employee>();
+    private String empName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Ticket = await Http.GetFromJsonAsync<Ticket>($"/api/Tickets/{Id}");
+            Employee = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+            foreach (var emp in Employee)
+            {
+                if (emp.EmployeeId == Ticket.UserId)
+                {
+                    empName = emp.Username;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void DeleteTicket()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/Tickets/{Id}");
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/tickets");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

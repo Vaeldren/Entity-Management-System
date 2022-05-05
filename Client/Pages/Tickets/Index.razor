@@ -1,0 +1,73 @@
+﻿@page "/tickets"
+
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h3>Tickets Table</h3>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Description</th>
+                <th>Assigned User</th>
+                <th>Status</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ticket in Tickets)
+            {
+            <tr>
+                <td>@ticket.Description</td>
+                <td>
+                    @foreach (var emp in Employees)
+                    {
+                        if (@emp.EmployeeId == @ticket.UserId)
+                        {
+                            @emp.Username
+                        }
+                    }
+                </td>
+                <td>@ticket.Status</td>
+                <td>@ticket.StartDate.ToShortDateString()</td>
+                <td>@ticket.EndDate.ToShortDateString()</td>
+                <td><a class="btn btn-outline-secondary" href="/tickets/edit/@ticket.TicketId">Edit</a></td>
+                <td><a class="btn btn-outline-danger" href="/tickets/delete/@ticket.TicketId">Delete</a></td>
+
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<p>
+    <a class="btn btn-primary" href="/tickets/create">Create</a>
+</p>
+
+@code {
+    private List<Ticket> Tickets = new List<Ticket>();
+    private List<Employee> Employees = new List<Employee>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Tickets = await Http.GetFromJsonAsync<List<Ticket>>("/api/Tickets");
+            Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+
+    }
+}
+

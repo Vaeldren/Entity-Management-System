@@ -1,0 +1,73 @@
+﻿@page "/employees/edit/{Id:guid}"
+
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject HttpClient Http 
+<h3>Edit Employee</h3>
+
+<EditForm Model="Employee" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label class="control-label">Employee Name</label>
+        <InputText @bind-Value="Employee.Username" class="form-control" default-value="@Employee.Username"/>
+        <ValidationMessage For="@(() => Employee.Username)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Assigned Company</label>
+        <select @bind="Employee.CompanyId" class="form-control">
+            <option value=""></option>
+            @foreach (var comp in companies)
+            {
+                <option value="@comp.CompanyId">@comp.CompanyName</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => Employee.CompanyId)" />
+    </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Modify
+        </button>
+</EditForm>
+
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Employee Employee { get; set; } = new Employee();
+    public List<Company> companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            Employee = await Http.GetFromJsonAsync<Employee>($"/api/Employees/{Id}");
+            companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void HandleValidSubmit()
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"/api/Employees/{Employee.EmployeeId}", Employee);
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/employees");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

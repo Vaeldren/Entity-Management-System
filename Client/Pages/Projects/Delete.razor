@@ -1,0 +1,74 @@
+﻿@page "/projects/delete/{Id:guid}"
+
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h1> Please confirm you want to delete the following project?</h1>
+
+<h4>Project Name</h4>
+<p>@Project.ProjectName</p>
+
+<h4>Assigned Company</h4>
+<p>@compName</p>
+
+<h4>Start Date</h4>
+<p>@Project.StartDate.ToShortDateString()</p>
+
+<h4>End Date</h4>
+<p>@Project.EndDate.ToShortDateString()</p>
+
+<h4>Completion</h4>
+<input disabled type="checkbox" value="@Project.Completed"/>
+
+<button class="btn btn-danger" @onclick="DeleteProject">Delete</button>
+
+@code{
+    [Parameter] public Guid Id { get; set; }
+    private Project Project { get; set; } = new Project();
+    private List<Company> Company = new List<Company>();
+    private String compName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Project = await Http.GetFromJsonAsync<Project>($"/api/Projects/{Id}");
+            Company = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+
+            foreach (var comp in Company)
+            {
+                if (comp.CompanyId == Project.CompanyId)
+                {
+                    compName = comp.CompanyName;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void DeleteProject()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/Projects/{Id}");
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/projects");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

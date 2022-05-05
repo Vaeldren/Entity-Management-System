@@ -1,0 +1,77 @@
+﻿@page "/projects/create"
+
+@attribute [Authorize]
+@inject HttpClient Http 
+@inject NavigationManager Navigation
+
+<h3>Create Project</h3>
+
+<EditForm Model="Project" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label class="control-label">Project Description</label>
+        <InputText @bind-Value="Project.ProjectName" class="form-control" />
+        <ValidationMessage For="@(() => Project.ProjectName)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Assigned Company</label>
+        <select @bind="Project.CompanyId" class="form-control">
+            <option value=""></option>
+            @foreach (var comp in companies)
+            {
+                <option value="@comp.CompanyId">@comp.CompanyName</option>
+            }
+        </select>
+        <ValidationMessage For="@(() => Project.CompanyId)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Starting Date</label>
+        <InputDate @bind-Value="Project.StartDate" class="form-control" />
+        <ValidationMessage For="@(() => Project.StartDate)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Ending Date</label>
+        <InputDate @bind-Value="Project.EndDate" class="form-control" />
+        <ValidationMessage For="@(() => Project.EndDate)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Create
+    </button>
+</EditForm>
+
+
+@code {
+    private Project Project { get; set; } = new Project();
+    public List<Company> companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        try {
+            Project.Completed = false;
+            var response = await Http.PostAsJsonAsync("/api/Projects", Project);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var project = JsonConvert.DeserializeObject<Project>(content);
+            Navigation.NavigateTo("/projects");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+
+        } catch (Exception e)
+        {
+
+        }
+    }
+}

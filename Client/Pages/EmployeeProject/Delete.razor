@@ -1,0 +1,74 @@
+﻿@page "/employeeprojects/delete/{Id:guid}"
+
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h1> Please confirm you want to delete the following project?</h1>
+
+<h4>Project Name</h4>
+<p>@Project.ProjectName</p>
+
+<h4>Assigned Company</h4>
+<p>@Company.CompanyName</p>
+
+<h4>Assigned User</h4>
+<p>@Employee.Username</p>
+
+<h4>Start Date</h4>
+<p>@Project.StartDate.ToShortDateString()</p>
+
+<h4>End Date</h4>
+<p>@Project.EndDate.ToShortDateString()</p>
+
+<h4>Completion</h4>
+<input disabled type="checkbox" value="@Project.Completed" />
+
+<p></p>
+<button class="btn btn-danger" @onclick="DeleteProject">Delete</button>
+
+@code{
+    [Parameter] public Guid Id { get; set; }
+    private Project Project { get; set; } = new Project();
+    private EmployeeProject EmployeeProject { get; set; } = new EmployeeProject();
+    private Company Company = new Company();
+    private Employee Employee = new Employee();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            EmployeeProject = await Http.GetFromJsonAsync<EmployeeProject>($"/api/EmployeeProjects/{Id}");
+            Project = await Http.GetFromJsonAsync<Project>($"/api/Projects/{EmployeeProject.ProjectId}");
+            Company = await Http.GetFromJsonAsync<Company>($"/api/Companies/{Project.CompanyId}");
+            Employee = await Http.GetFromJsonAsync<Employee>($"/api/Employees/{EmployeeProject.EmployeeId}");
+
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void DeleteProject()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/EmployeeProjects/{Id}");
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/employeeprojects");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

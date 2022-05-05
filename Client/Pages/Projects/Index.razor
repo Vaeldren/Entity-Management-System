@@ -1,0 +1,88 @@
+﻿@page "/projects"
+
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h3>Projects Table</h3>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Project</th>
+                <th>Company</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Amount of Employees</th>
+                <th>Complete?</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in Projects)
+            {
+                int count = 0;
+            <tr>
+                <td>@project.ProjectName</td>
+                <td>
+                    @foreach (var comp in Companies)
+                    {
+                        if (@comp.CompanyId == @project.CompanyId)
+                        {
+                            @comp.CompanyName
+                        }
+                    }
+                </td>
+                <td>@project.StartDate.ToShortDateString()</td>
+                <td>@project.EndDate.ToShortDateString()</td>
+                <td>
+                    @foreach (var empProj in EmployeeProjects)
+                    {
+                        if(empProj.ProjectId == project.ProjectId)
+                        {
+                            count+= 1;
+                        }
+                    }
+                    @count
+                </td>
+                <td><input  type="checkbox" checked="@project.Completed" disabled/></td>
+                <td><a class="btn btn-outline-secondary" href="/projects/edit/@project.ProjectId">Edit</a></td>
+                <td><a class="btn btn-outline-danger" href="/projects/delete/@project.ProjectId">Delete</a></td>
+                <td><a class="btn btn-outline-primary" href="/projects/assign/@project.ProjectId">Assign to Project</a></td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<p>
+    <a class="btn btn-primary" href="/projects/create">Create</a>
+</p>
+
+@code {
+    private List<Project> Projects = new List<Project>();
+    private List<EmployeeProject> EmployeeProjects = new List<EmployeeProject>();
+    private List<Company> Companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Projects");
+            Companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+            EmployeeProjects = await Http.GetFromJsonAsync<List<EmployeeProject>>("/api/EmployeeProjects");
+
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+
+    }
+}
+

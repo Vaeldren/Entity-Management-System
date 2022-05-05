@@ -1,0 +1,100 @@
+﻿@page "/projects/assign/{Id:guid}"
+
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h3>Assign User To Project</h3>
+
+<h4>Project Name</h4>
+<p>@Project.ProjectName</p>
+
+<h4>Assigned Company</h4>
+<p>@compName</p>
+
+<h4>Start Date</h4>
+<p>@Project.StartDate.ToShortDateString()</p>
+
+<h4>End Date</h4>
+<p>@Project.EndDate.ToShortDateString()</p>
+
+<label class="control-label">Assigned User</label>
+
+<select @bind="@EmpProj.EmployeeId" class="form-control">
+    <option value=""></option>
+    @foreach (var emp in employees)
+    {
+        <option value="@emp.EmployeeId">@emp.Username</option>
+    }
+</select>
+<p></p>
+<p></p>
+<button class="btn btn-primary" @onclick="AssignUser">Assign to user</button>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Project Project { get; set; } = new Project();
+    private EmployeeProject EmpProj { get; set; } = new EmployeeProject();
+    private List<Employee> employees = new List<Employee>();
+    private List<Company> companies = new List<Company>();
+    private List<EmployeeProject> employeeprojects = new List<EmployeeProject>();
+    private string compName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Project = await Http.GetFromJsonAsync<Project>($"/api/Projects/{Id}");
+            employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+            companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+            employeeprojects = await Http.GetFromJsonAsync<List<EmployeeProject>>("/api/EmployeeProjects");
+
+            foreach (var comp in companies)
+            {
+                if (comp.CompanyId == Project.CompanyId)
+                {
+                    compName = comp.CompanyName;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void AssignUser()
+    {
+        int count = 0;
+        try
+        {
+            EmpProj.ProjectId = Project.ProjectId;
+
+            foreach (var en in employeeprojects)
+            {
+                if(en.EmployeeId == EmpProj.EmployeeId & en.ProjectId == EmpProj.ProjectId)
+                {
+                    count += 1;
+                }
+            }
+
+            if (count == 0)
+            {
+                var response = await Http.PostAsJsonAsync("/api/EmployeeProjects", EmpProj);
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var empProject = JsonConvert.DeserializeObject<EmployeeProject>(content);
+                Navigation.NavigateTo("/projects");
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+}

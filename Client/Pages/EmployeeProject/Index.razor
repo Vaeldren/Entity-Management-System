@@ -1,0 +1,92 @@
+﻿@page "/employeeprojects"
+
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h3>Projects Table</h3>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Project</th>
+                <th>Company</th>
+                <th>Employee</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+
+            @foreach (var empProj in EmployeeProjects)
+            {
+                Employee emp = new Employee();
+                Project proj = new Project();
+                Company comp = new Company();
+
+                foreach (var e in Employees)
+                {
+                    if (e.EmployeeId == empProj.EmployeeId)
+                    {
+                        emp = e;
+                    }
+                }
+
+                foreach (var p in Projects)
+                {
+                    if (p.ProjectId == empProj.ProjectId)
+                    {
+                        proj = p;
+                    }
+                }
+
+                foreach (var c in Companies)
+                {
+                    if(c.CompanyId == proj.CompanyId)
+                    {
+                        comp = c;
+                    }
+                }
+
+            <tr>
+                <td>@proj.ProjectName</td>
+                <td>@comp.CompanyName</td>
+                <td>@emp.Username</td>
+                <td>@proj.StartDate.ToShortDateString()</td>
+                <td>@proj.EndDate.ToShortDateString()</td>
+                <td><a class="btn btn-outline-danger" href="/employeeprojects/delete/@empProj.EmployeeProjectId">Delete</a></td>
+            </tr>    
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<EmployeeProject> EmployeeProjects = new List<EmployeeProject>();
+    private List<Project> Projects = new List<Project>();
+    private List<Employee> Employees = new List<Employee>();
+    private List<Company> Companies = new List<Company>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            EmployeeProjects = await Http.GetFromJsonAsync<List<EmployeeProject>>("/api/EmployeeProjects");
+            Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Projects");
+            Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+            Companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+
+    }
+
+}
+

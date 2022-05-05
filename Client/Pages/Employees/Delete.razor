@@ -1,0 +1,65 @@
+﻿@page "/employees/delete/{Id:guid}"
+
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h1> Please confirm you want to delete the following project?</h1>
+
+<h4>Employees Name</h4>
+<p>@Employee.Username</p>
+
+<h4>Assigned Company</h4>
+<p>@compName</p>
+
+<button class="btn btn-danger" @onclick="DeleteEmployee">Delete</button>
+
+@code{
+    [Parameter] public Guid Id { get; set; }
+    private Employee Employee { get; set; } = new Employee();
+    private List<Company> Company= new List<Company>();
+    private String compName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Employee = await Http.GetFromJsonAsync<Employee>($"/api/Employees/{Id}");
+            Company = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+
+            foreach (var comp in Company)
+            {
+                if (comp.CompanyId == Employee.CompanyId)
+                {
+                    compName = comp.CompanyName;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void DeleteEmployee()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/Employees/{Id}");
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/employees");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

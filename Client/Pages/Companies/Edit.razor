@@ -1,0 +1,73 @@
+﻿@page "/companies/edit/{Id:guid}"
+
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject HttpClient Http 
+<h3>Edit Company</h3>
+
+<EditForm Model="Company" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="form-group">
+        <label class="control-label">Company Name</label>
+        <InputText @bind-Value="Company.CompanyName" class="form-control" default-value="@Company.CompanyName" />
+        <ValidationMessage For="@(() => Company.CompanyName)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Chief Executive Officer</label>
+        <InputText @bind-Value="Company.Ceo" class="form-control" default-value="@Company.Ceo" />
+        <ValidationMessage For="@(() => Company.Ceo)" />
+    </div>
+
+    <div class="form-group">
+        <label class="control-label">Employee Count</label>
+        <InputNumber @bind-Value="Company.EmployeeCount" class="form-control" default-value="@Company.EmployeeCount" />
+        <ValidationMessage For="@(() => Company.EmployeeCount)" />
+    </div>
+
+
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Modify
+    </button>
+</EditForm>
+
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private Company Company { get; set; } = new Company();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            Company = await Http.GetFromJsonAsync<Company>($"/api/Companies/{Id}");
+
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    private async void HandleValidSubmit()
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"/api/Companies/{Company.CompanyId}", Company);
+            response.EnsureSuccessStatusCode();
+            Navigation.NavigateTo("/companies");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+}

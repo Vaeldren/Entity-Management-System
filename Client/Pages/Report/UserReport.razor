@@ -1,0 +1,148 @@
+﻿@page "/report"
+
+@attribute [Authorize]
+@inject HttpClient Http
+
+<h3>Report - Completed Projects and Tickets</h3>
+
+<EditForm Model="Ticket" OnSubmit="@Report">
+    <DataAnnotationsValidator />
+    <div class="user">
+        <div class="form-group">
+            <label class="control-label">Starting Date</label>
+            <InputDate @bind-Value="Ticket.StartDate" class="form-control" />
+            <ValidationMessage For="@(() => Ticket.StartDate)" />
+        </div>
+
+        <div class="form-group">
+            <label class="control-label">Ending Date</label>
+            <InputDate @bind-Value="Ticket.EndDate" class="form-control" />
+            <ValidationMessage For="@(() => Ticket.EndDate)" />
+        </div>
+    </div>
+    <button class="btn-primary">Show Report</button>
+</EditForm>
+
+<p></p>
+<p></p>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Type</th>
+                <th>Name</th>
+                <th>Belongs to</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in successProjects)
+            {
+                <tr>
+                    <td>Project</td>
+                    <td>@project.ProjectName</td>
+                    <td>
+                        @foreach (var comp in Companies)
+                        {
+                            if (@comp.CompanyId == @project.CompanyId)
+                            {
+                                @comp.CompanyName
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+            @foreach (var ticket in successTickets)
+            {
+                <tr>
+                    <td>Ticket</td>
+                    <td>@ticket.Description</td>
+                    <td>
+                        @foreach (var user in Employees)
+                        {
+                            if (@user.EmployeeId == @ticket.UserId)
+                            {
+                                @user.Username
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+
+    private List<Project> Projects = new List<Project>();
+    private List<Employee> Employees = new List<Employee>();
+    private List<EmployeeProject> EmpProj = new List<EmployeeProject>();
+    private List<Ticket> Tickets = new List<Ticket>();
+    private Ticket Ticket = new Ticket();
+    private List<Company> Companies = new List<Company>();
+    private List<Ticket> successTickets = new List<Ticket>();
+    private List<Project> successProjects = new List<Project>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var s = DateTime.Today;
+            Ticket.EndDate = s.AddDays(1);
+            Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Projects");
+            Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employees");
+            EmpProj = await Http.GetFromJsonAsync<List<EmployeeProject>>("/api/EmployeeProjects");
+            Tickets = await Http.GetFromJsonAsync<List<Ticket>>("/api/Tickets");
+            Companies = await Http.GetFromJsonAsync<List<Company>>("/api/Companies");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    @*    private void TicketReport()
+        {
+            int count = 0;
+            double dayDiff = (Ticket.EndDate - Ticket.StartDate).TotalDays;
+
+            foreach (var tick in Tickets)
+            {
+                if (tick.UserId == Ticket.UserId & tick.StartDate >= Ticket.StartDate & tick.EndDate <= Ticket.EndDate)
+                {
+                    count += 1;
+                }
+            }
+
+            finalResult = $"Tickets done in total over date range: {count}. Average tickets per day: {(count / dayDiff)}";
+
+        }*@
+
+private void Report()
+{
+    successTickets.Clear();
+    successProjects.Clear();
+
+    foreach (var t in Tickets)
+    {
+        if (t.StartDate >= Ticket.StartDate & t.EndDate <= Ticket.EndDate & t.Status == "Closed")
+        {
+            successTickets.Add(t);
+        }
+    }
+
+    foreach (var p in Projects)
+    {
+        if (p.StartDate >= Ticket.StartDate & p.EndDate <= Ticket.EndDate & p.Completed == true)
+        {
+            successProjects.Add(p);
+        }
+    }
+}
+
+}
